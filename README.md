@@ -1,2 +1,2 @@
-# ECG-anomaly-detection
-Time series anomaly detection using Conv1d Autoencoder
+# ECG-bin-classifier
+Time series binary classifier based on Conv1d Autoencoder reconstruction error
