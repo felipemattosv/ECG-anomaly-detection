@@ -298,3 +298,93 @@ def plot_mean_comparison_grid(
     
     plt.tight_layout()
     plt.show()
+
+def plot_histogram_distributions(
+        title: str,
+        xlabel: str,
+        points: list[np.ndarray], labels: list[str], 
+        threshold: float = 5,
+        figsize: tuple = (12, 6),
+        xlim: list[float] = [0, 10],ylim: list[float] = [0, 500], 
+        num_bins: int =100) -> None:
+    """
+    Plot the distributions using histograms
+
+    Args:
+        title: Title of the plot.
+        x_label: Label for the x-axis.
+        points: Data points.
+        labels: List of labels for the datasets.
+        threshold: Threshold. Defaults to 5.
+        xlim: x-axis limits for the plot. Defaults to [0, 10].
+        num_bins: Number of bins for the histogram. Defaults to 50000.
+    """
+    plt.figure(figsize=figsize)
+
+    for i, (errors, label) in enumerate(zip(points, labels)):
+        plt.hist(errors, bins=num_bins, alpha=0.5, label=label, color=f"C{i}")
+    
+    if threshold is not None:
+        plt.axvline(threshold, color='black', linestyle='--', linewidth=2, label='Threshold')
+
+    plt.xlabel(xlabel)
+    plt.ylabel('Frequency')
+    plt.title(title)
+    plt.legend(loc = 'upper right')
+    plt.ylim(ylim)
+    plt.xlim(xlim)
+
+    plt.show()
+
+def plot_feature_space(
+        df: pd.DataFrame,
+        feature_columns: list[str],
+        label_column: str,
+        title: str = 'Feature Space',
+        figsize: tuple = (12, 8),
+        alpha: float = 0.5,
+        s: int = 30) -> None:
+    """
+    Plot a 2D or 3D scatter of features colored by label.
+    Args:
+        df: DataFrame with feature columns and a label column.
+        feature_columns: List of 2 or 3 column names to use as axes.
+        label_column: Column name containing labels.
+        title: Title of the plot. Defaults to 'Feature Space'.
+        figsize: Figure size. Defaults to (12, 8).
+        alpha: Point transparency. Defaults to 0.5.
+        s: Point size. Defaults to 30.
+    """
+    unique_labels = df[label_column].unique()
+    fig = plt.figure(figsize=figsize)
+
+    if len(feature_columns) == 3:
+        ax = fig.add_subplot(111, projection='3d')
+        for i, label in enumerate(unique_labels):
+            mask = df[label_column] == label
+            ax.scatter(
+                df.loc[mask, feature_columns[0]],
+                df.loc[mask, feature_columns[1]],
+                df.loc[mask, feature_columns[2]],
+                alpha=alpha, label=label, color=f"C{i}", s=s
+            )
+        ax.set_zlabel(feature_columns[2])
+
+    elif len(feature_columns) == 2:
+        ax = fig.add_subplot(111)
+        for i, label in enumerate(unique_labels):
+            mask = df[label_column] == label
+            ax.scatter(
+                df.loc[mask, feature_columns[0]],
+                df.loc[mask, feature_columns[1]],
+                alpha=alpha, label=label, color=f"C{i}", s=s
+            )
+
+    else:
+        raise ValueError("feature_columns must have 2 or 3 elements.")
+
+    ax.set_xlabel(feature_columns[0])
+    ax.set_ylabel(feature_columns[1])
+    ax.set_title(title)
+    ax.legend(loc='upper right')
+    plt.show()
