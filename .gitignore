@@ -3,3 +3,13 @@ data/processed/*.parquet
 
 utils/__pycache__
 utils/__pycache__/*
+autoencoder/__pycache__
+autoencoder/__pycache__/*
+
+lightning_logs
+lightning_logs/*
+
+models
+models/*
+
+.env
