@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
-
+import hiplot as hip
+import math
 
 def plot_series(
     df: pd.DataFrame,
@@ -387,4 +388,149 @@ def plot_feature_space(
     ax.set_ylabel(feature_columns[1])
     ax.set_title(title)
     ax.legend(loc='upper right')
+    plt.show()
+
+#TODO improve hiplot using https://facebookresearch.github.io/hiplot/experiment_settings.html#drawing-lines-by-connecting-datapoints 
+def visualize_with_hiplot(df: pd.DataFrame) -> None:
+    """
+    Visualizes a Pandas DataFrame using HiPlot.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing the data to visualize.
+    
+    Returns:
+    - Displays an interactive HiPlot visualization.
+    """
+    # Convert the DataFrame to a HiPlot experiment
+    data = df.to_dict(orient='records')
+    exp = hip.Experiment.from_iterable(data)
+    
+    # Display the HiPlot visualization
+    exp.display()
+
+def plot_loss_curves(train_losses: list[float], val_losses: list[float]) -> None:
+    """
+    Plot the training and validation loss curves.
+
+    Args:
+        train_losses: List of training loss values.
+        val_losses: List of validation loss values.
+    """
+    plt.figure(figsize=(15, 6))
+    epochs = range(1, len(train_losses) + 1)
+
+    plt.plot(epochs, train_losses, label='Training Loss')
+    plt.plot(epochs, val_losses, label='Validation Loss')
+    
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss Curves')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def visualize_weight_distributions(model) -> None:
+    """
+    Visualizes the weights distribution of the encoder layers.
+
+    Params:
+    - model: PyTorch model containing the encoder module.
+    """
+    encoder_weights = []
+    for name, param in model.encoder.named_parameters():
+        if 'weight' in name:  # Select the weight parameters of the encoder layers
+            encoder_weights.append(param.data.cpu().numpy())
+    
+    fig, axs = plt.subplots(1, len(encoder_weights), figsize=(6 * len(encoder_weights), 5))
+
+    if len(encoder_weights) == 1:
+        axs = [axs]  # Ensure axs is iterable even if there's only one layer
+
+    for i, weights in enumerate(encoder_weights):
+        axs[i].hist(weights.flatten(), bins=30, color='skyblue', edgecolor='black')
+        axs[i].set_title(f"Layer {i+1}")
+        axs[i].set_xlabel("Weight")
+        axs[i].set_ylabel("Frequency")
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_windows_original_and_reconstruction(
+    df,
+    window_indexes,
+    signal_col='signal',
+    reconstructed_col='reconstructed',
+    title="Original vs Reconstructed Series",
+    n_cols=2,
+    figsize=(14, 10),
+):
+    """
+    Plots signal vs reconstructed series for selected windows in a grid.
+
+    Args:
+        df                : DataFrame with signal, reconstructed and window_index columns
+        window_indexes    : list of window indices to plot, e.g. [0, 3, 5, 12]
+        signal_col        : name of the original signal column
+        reconstructed_col : name of the reconstructed signal column
+        title             : overall figure title
+        n_cols            : number of columns in the grid
+        figsize           : overall figure size (width, height)
+    """
+    n = len(window_indexes)
+    n_rows = math.ceil(n / n_cols)
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
+    fig.suptitle(title, fontsize=15, fontweight='bold')
+    axes = axes.flatten()
+
+    for i, idx in enumerate(window_indexes):
+        subset = df[df['window_index'] == idx]
+        axes[i].plot(subset.index, subset[signal_col], label=signal_col)
+        axes[i].plot(subset.index, subset[reconstructed_col], label=reconstructed_col)
+        axes[i].set_title(f'Window {idx}')
+        axes[i].legend()
+
+    for j in range(n, len(axes)):
+        axes[j].set_visible(False)
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_scatter(
+    df,
+    x_col,
+    y_col,
+    label_col=None,
+    title='Scatter Plot',
+    figsize=(10, 6),
+    alpha=0.7,
+    s=30,
+):
+    """
+    Plots a scatter from a DataFrame.
+
+    Args:
+        df        : DataFrame with the data
+        x_col     : column name for the x axis
+        y_col     : column name for the y axis
+        label_col : optional column for coloring and legend grouping
+        title     : figure title
+        figsize   : figure size (width, height)
+        alpha     : point transparency
+        s         : point size
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if label_col:
+        for label, group in df.groupby(label_col):
+            ax.scatter(group[x_col], group[y_col], label=label, alpha=alpha, s=s)
+        ax.legend(title=label_col)
+    else:
+        ax.scatter(df[x_col], df[y_col], alpha=alpha, s=s)
+
+    ax.set_xlabel(x_col)
+    ax.set_ylabel(y_col)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.grid(True, linestyle='--', alpha=0.4)
+    plt.tight_layout()
     plt.show()
