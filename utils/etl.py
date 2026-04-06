@@ -81,3 +81,94 @@ def train_test_split(
             result.append(arr_np[test_indices])
     
     return result
+
+def split_data(
+    normal_df: pd.DataFrame, 
+    anomaly_df: pd.DataFrame, 
+    contamination: float = 0.0, 
+    random_state: int = 42
+) -> dict[str, pd.DataFrame]:
+    """
+    Split normal and anomaly dataframes into train, hyperparam, threshold and test sets.
+    
+    Contaminates train and hyperparam sets with the specified proportion of anomalies.
+    The remaining anomalies are split 50/50 between threshold and test sets.
+    
+    Parameters:
+        normal_df : Normal samples.
+        anomaly_df : Anomalous samples
+        contamination : Proportion of anomalies in train and hyperparam sets (0.0 to 1.0).
+        random_state : Random seed for reproducibility.
+    
+    Returns:
+        dict with keys: train_df, hyperparam_df, threshold_df, test_df
+    """
+    if not 0.0 <= contamination < 1.0:
+        raise ValueError("contamination must be in [0.0, 1.0)")
+
+    # Split normal_df (70/15/7.5/7.5)
+    train_normal, temp_df = train_test_split(
+        normal_df, test_size=0.30, random_state=random_state
+    )
+    hyperparam_normal, temp2_df = train_test_split(
+        temp_df, test_size=0.50, random_state=random_state
+    )
+    threshold_normal, test_normal = train_test_split(
+        temp2_df, test_size=0.50, random_state=random_state
+    )
+
+    # Compute how many anomalies are needed for train and hyperparam
+    # n_anom / (n_normal + n_anom) = c
+    # => n_anom = c * n_normal / (1 - c)
+    def n_anomalies_needed(n_normal, c):
+        if c == 0.0:
+            return 0
+        return int(round(c * n_normal / (1 - c)))
+
+    n_anom_train = n_anomalies_needed(len(train_normal), contamination)
+    n_anom_hyper = n_anomalies_needed(len(hyperparam_normal), contamination)
+    total_contamination_anom = n_anom_train + n_anom_hyper
+
+    if total_contamination_anom > len(anomaly_df):
+        raise ValueError(
+            f"Not enough anomalies: need {total_contamination_anom}, "
+            f"got {len(anomaly_df)}."
+        )
+
+    # Split anomaly_df
+    anomaly_shuffled = anomaly_df.sample(
+        frac=1, random_state=random_state
+    ).reset_index(drop=True)
+
+    anom_train = anomaly_shuffled.iloc[:n_anom_train]
+    anom_hyper = anomaly_shuffled.iloc[n_anom_train:total_contamination_anom]
+    anom_remaining = anomaly_shuffled.iloc[total_contamination_anom:].reset_index(drop=True)
+
+    # Split remaining anomalies 50/50 between threshold and test
+    threshold_anom, test_anom = train_test_split(
+        anom_remaining, test_size=0.50, random_state=random_state
+    )
+
+    # Concat and shuffle
+    train_df = pd.concat([train_normal, anom_train], ignore_index=True).sample(
+        frac=1, random_state=random_state
+    ).reset_index(drop=True)
+
+    hyperparam_df = pd.concat([hyperparam_normal, anom_hyper], ignore_index=True).sample(
+        frac=1, random_state=random_state
+    ).reset_index(drop=True)
+
+    threshold_df = pd.concat([threshold_normal, threshold_anom], ignore_index=True).sample(
+        frac=1, random_state=random_state
+    ).reset_index(drop=True)
+
+    test_df = pd.concat([test_normal, test_anom], ignore_index=True).sample(
+        frac=1, random_state=random_state
+    ).reset_index(drop=True)
+
+    return {
+        "train_df": train_df,
+        "hyperparam_df": hyperparam_df,
+        "threshold_df": threshold_df,
+        "test_df": test_df,
+    }
