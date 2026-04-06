@@ -51,6 +51,11 @@ Three **unsupervised** models are compared:
 - **Conv1D Autoencoder**: a convolutional autoencoder trained to reconstruct 
   normal series. Reconstruction error is used as the anomaly score. 
   Hyperparameters are tuned with Optuna (see `4_AE_train.py` and `autoencoder/optuna_optim_3L.py`).
+  The 3 layers Conv1d Autoencoder Architechture is shown below:
+
+<p align="center">
+  <img src="assets/ae_arch.png" alt="3L Conv1d AE Arch" width="40%">
+</p>
 
 Threshold calibration methodology is detailed in notebooks `3_BaselineModels` 
 and `5_AE_Results`.
@@ -73,30 +78,28 @@ the simple Reference Subtraction baseline is surprisingly competitive.
 
 ### Contaminated experiment (10%)
 
-| Model                 | Macro avg F1 |
-|-----------------------|--------------|
-| Reference Subtraction | **0.93**     |
-| Mahalanobis           | 0.86         |
-| Conv1D Autoencoder    | 0.28         |
+| Model                 | Macro avg F1 | FN    | FP  |
+|-----------------------|--------------|-------|-----|
+| Reference Subtraction | **0.93**     | 12    | 34  |
+| Mahalanobis           | 0.86         | 53    | 47  |
+| Conv1D Autoencoder    | 0.28         | 772   | 31  |
 
 Under realistic contamination, the ranking changes. The 
 Reference Subtraction baseline is nearly unaffected — the point-wise 
 median has a 50% breakdown point and is essentially immune to 10% 
 contamination. The autoencoder, on the other hand, performs poorly on the classification task.
 
-### Why does the autoencoder fails?
+### Why does the autoencoder fail for the contaminated experiment?
 
-Despite the terrible F1 score, the autoencoder did **not** fail to 
-learn. The latent space still shows a separation between normal and 
-anomalous samples:
+Despite the terrible F1 score, the autoencoder did **not** fail to learn. The latent space still shows a separation between normal and anomalous samples, indicating that discriminative information is retained:
 
-![Latent Space](assets/ls_ae_cont.png)
+<img src="assets/ls_ae_cont.png" alt="Latent Space" width="60%">
 
 What failed was the **detection criterion**: with contamination, the 
 decoder learns to reconstruct anomalies alongside normal patterns, 
-causing reconstruction errors to overlap across classes. The 
-discriminative information is retained in the latent space but lost 
-when collapsing to a single reconstruction-error score.
+causing reconstruction errors to overlap across classes. The figure below — generated after metric computation, for explainability purposes only — illustrates this effect: the model learned to reconstruct both normal and anomalous patterns, resulting in overlapping reconstruction error distributions between the two classes.
+
+<img src="assets/test_wme_cont.png" alt="WME distribuitions" width="60%">
 
 ## Conclusion
 
