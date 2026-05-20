@@ -1,6 +1,5 @@
-# ECG-bin-classifier
-
-Unsupervised binary classification of ECG time series, comparing simple 
+# ECG-anomaly-detection
+Unsupervised anomaly detection of ECG time series, comparing simple 
 baselines against a Conv1D Autoencoder under both ideal 
 and realistic (contaminated) training conditions.
 
